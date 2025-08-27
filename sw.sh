@@ -5,7 +5,12 @@
 # 版本: 1.0
 # 描述: 将本地系统流量通过redsocks转发到远程Clash Verge代理服务器，像织布一样巧妙地编织和引导网络流
 
-set -euo pipefail  # 严格模式
+# 对于测试功能，我们暂时禁用严格模式
+if [[ "${1:-}" == "test" ]]; then
+    set -uo pipefail  # 禁用-e选项，允许命令失败
+else
+    set -euo pipefail  # 严格模式
+fi
 
 # 全局变量
 export DEBIAN_FRONTEND=noninteractive
@@ -1438,14 +1443,15 @@ interactive_menu() {
         echo "   6) ➕ 添加自定义豁免规则"
         echo "   7) ➖ 删除自定义豁免规则"
         echo "   8) 📋 列出自定义豁免规则"
-        echo "   9) 🗑️  重置系统到默认状态"
-        echo "   10) 📖 显示帮助"
+        echo "   9) 🌐 测试境外网站访问"
+        echo "   10) 🗑️  重置系统到默认状态"
+        echo "   11) 📖 显示帮助"
         echo "   0) 🚪 退出"
         echo ""
         
         # 使用不同的方式读取输入，取决于是否在交互式终端中
         if [ $is_interactive -eq 1 ]; then
-            read -p "请选择操作 [0-10]: " choice
+            read -p "请选择操作 [0-11]: " choice
         else
             # 非交互式环境，从标准输入读取
             read choice
@@ -1754,6 +1760,20 @@ interactive_menu() {
                 wait_for_enter
                 ;;
             9)
+                echo "🌐 测试境外网站访问"
+                echo ""
+                # 临时禁用严格模式以允许测试命令失败
+                set +e
+                test_connectivity
+                # 恢复严格模式
+                if [[ "${1:-}" != "test" ]]; then
+                    set -euo pipefail
+                else
+                    set -uo pipefail
+                fi
+                wait_for_enter
+                ;;
+            10)
                 echo "🗑️  重置系统到默认状态"
                 echo ""
                 echo "⚠️  警告: 此操作将删除配置并停止服务"
@@ -1807,7 +1827,7 @@ interactive_menu() {
                 esac
                 wait_for_enter
                 ;;
-            10)
+            11)
                 show_help
                 wait_for_enter
                 ;;
@@ -1816,11 +1836,92 @@ interactive_menu() {
                 break
                 ;;
             *)
-                echo "❌ 无效选择，请输入 0-10"
+                echo "❌ 无效选择，请输入 0-11"
                 wait_for_enter
                 ;;
         esac
     done
+}
+
+# 测试境外网站访问功能
+test_connectivity() {
+    echo "🌐 测试境外网站访问功能"
+    echo "========================"
+    echo ""
+    
+    # 定义要测试的境外网站列表
+    local websites=(
+        "google.com"
+        "youtube.com"
+        "github.com"
+        "wikipedia.org"
+        "stackoverflow.com"
+        "reddit.com"
+        "twitter.com"
+        "facebook.com"
+        "instagram.com"
+        "linkedin.com"
+    )
+    
+    local success_count=0
+    local total_count=${#websites[@]}
+    
+    echo "正在测试 $total_count 个境外主流网站的访问..."
+    echo ""
+    
+    # 逐个测试网站访问
+    for website in "${websites[@]}"; do
+        echo -n "测试 $website ... "
+        
+        # 使用curl测试网站访问，设置5秒超时
+        if command -v curl >/dev/null 2>&1; then
+            # 使用|| true确保即使curl失败也不会导致脚本退出
+            if curl -s --connect-timeout 5 --max-time 10 "https://$website" >/dev/null 2>&1 || \
+               curl -s --connect-timeout 5 --max-time 10 "http://$website" >/dev/null 2>&1; then
+                echo "✅ 可访问"
+                ((success_count++))
+            else
+                echo "❌ 无法访问"
+            fi
+        elif command -v wget >/dev/null 2>&1; then
+            # 使用|| true确保即使wget失败也不会导致脚本退出
+            if wget --spider --timeout=5 --tries=1 "https://$website" >/dev/null 2>&1 || \
+               wget --spider --timeout=5 --tries=1 "http://$website" >/dev/null 2>&1; then
+                echo "✅ 可访问"
+                ((success_count++))
+            else
+                echo "❌ 无法访问"
+            fi
+        else
+            echo "⚠️  无可用测试工具 (需要curl或wget)"
+            break
+        fi
+    done
+    
+    echo ""
+    echo "📊 测试结果: $success_count/$total_count 个网站可访问"
+    
+    if [ $success_count -eq $total_count ]; then
+        echo "🎉 所有测试网站均可正常访问！"
+    elif [ $success_count -gt 0 ]; then
+        echo "⚠️  部分网站可访问 ($success_count/$total_count)"
+    else
+        echo "❌ 所有测试网站均无法访问"
+        echo "💡 建议检查:"
+        echo "   • 网络连接是否正常"
+        echo "   • 代理配置是否正确"
+        echo "   • 远程Clash Verge服务是否运行"
+        echo "   • 防火墙设置"
+    fi
+    
+    echo ""
+    echo "📝 测试的网站列表:"
+    for website in "${websites[@]}"; do
+        echo "   • $website"
+    done
+    
+    # 返回成功状态码
+    return 0
 }
 
 # 显示帮助信息
@@ -1840,6 +1941,7 @@ show_help() {
     remove-exemption (rm) <type> <value>  删除自定义豁免规则
     remove-all-exemptions (ra)  删除所有自定义豁免规则
     list-exemptions (l)      列出所有自定义豁免规则
+    test                     测试境外网站访问功能
     reset [-k|--keep-exemptions]  重置系统到默认状态
     menu (m)                 进入交互式菜单
     help (h)                 显示此帮助信息
@@ -1855,6 +1957,7 @@ show_help() {
     $0 a port 8080                   # 豁免特定端口
     $0 a port 8080,9090,3306         # 豁免多个端口
     $0 l                             # 列出所有自定义豁免规则
+    $0 test                          # 测试境外网站访问
     $0 ra                            # 删除所有自定义豁免规则
     $0 reset                         # 完全重置系统（包括豁免规则）
     $0 reset -k                      # 部分重置系统（保留豁免规则）
@@ -1871,7 +1974,7 @@ show_help() {
 
 ⚠️  注意:
     • start(s)/stop(x)/restart(r)/config(c)/reset/add-exemption(a)/remove-exemption(rm)/remove-all-exemptions(ra) 命令需要 root 权限
-    • status(t)/menu(m)/help(h)/list-exemptions(l) 命令可以在普通用户下运行
+    • status(t)/menu(m)/help(h)/list-exemptions(l)/test 命令可以在普通用户下运行
     • 默认远程代理服务器: 192.168.1.100:7890
     • 配置文件位置: $CONFIG_FILE
     • 豁免规则文件位置: $CUSTOM_EXEMPTION_FILE
@@ -1899,7 +2002,7 @@ needs_root_permission() {
         start|s|stop|x|restart|r|config|c|reset|add-exemption|a|remove-exemption|rm|remove-all-exemptions|ra)
             return 0  # 需要root权限
             ;;
-        status|t|help|--help|-h|h|menu|m|list-exemptions|l)
+        status|t|help|--help|-h|h|menu|m|list-exemptions|l|test)
             return 1  # 不需要root权限
             ;;
         *)
@@ -1944,6 +2047,11 @@ main() {
             ;;
         list-exemptions|l)
             list_exemptions
+            ;;
+        test)
+            test_connectivity
+            # 对于测试命令，我们需要确保脚本正常退出而不是触发清理
+            exit 0
             ;;
         reset)
             # 检查是否有参数指定是否重置豁免规则
