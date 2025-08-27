@@ -207,3 +207,7 @@ port=8080
 ## 📄 许可证
 
 本项目采用MIT许可证，详情请参见 [LICENSE](LICENSE) 文件。
+
+## 📘 使用示例
+
+更多使用示例请参见 [EXAMPLES.md](EXAMPLES.md) 文件。
