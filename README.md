@@ -1,8 +1,9 @@
 # 🔧 Linux系统流量转发到远程Clash Verge代理工具
+# 🌐 Stream Weaver - 流织者
 
 ## 📖 功能简介
 
-一个将本地Linux系统流量透明转发到远程Clash Verge代理服务器的工具。通过redsocks和iptables实现，使系统所有TCP流量都能通过远程代理进行路由。
+Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到远程Clash Verge代理服务器的工具。通过redsocks和iptables实现，像织布一样巧妙地编织和引导所有TCP流量通过远程代理进行路由。
 
 ### 🔍 功能特点
 
@@ -193,7 +194,7 @@ port=8080
 
 ## 🗑️ 卸载清理
 
-```bash
+``bash
 # 停止服务
 sudo ./clash_forward.sh x
 

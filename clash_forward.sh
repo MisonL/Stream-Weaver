@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Linux系统流量转发到远程Clash Verge代理服务器工具
+# Stream Weaver (流织者) - Linux系统流量转发到远程Clash Verge代理服务器工具
 # 作者: 系统管理员
 # 版本: 1.0
-# 描述: 将本地系统流量通过redsocks转发到远程Clash Verge代理服务器
+# 描述: 将本地系统流量通过redsocks转发到远程Clash Verge代理服务器，像织布一样巧妙地编织和引导网络流
 
 set -euo pipefail  # 严格模式
 
@@ -1859,6 +1859,7 @@ show_help() {
     $0 reset                         # 完全重置系统（包括豁免规则）
     $0 reset -k                      # 部分重置系统（保留豁免规则）
     $0 m                             # 交互式菜单
+    help (h)                 显示此帮助信息
 
 在交互式菜单的"删除自定义豁免规则"选项中，您可以:
     • 选择特定规则序号删除单个规则
