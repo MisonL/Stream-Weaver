@@ -1,0 +1,25 @@
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+*~
+.DS_Store
+Thumbs.db
+
+# 编辑器备份文件
+*.swp
+*.swo
+
+# Vim
+*.vim
+
+# VS Code
+.vscode/
+
+# IDE
+.idea/
+
+# 系统配置文件（这些由脚本管理，不需要版本控制）
+/etc/
