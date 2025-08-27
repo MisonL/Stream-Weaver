@@ -24,13 +24,13 @@ Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到�
 ### 1. 设置执行权限
 
 ```bash
-chmod +x clash_forward.sh
+chmod +x sw.sh
 ```
 
 ### 2. 配置代理服务器
 
 ```bash
-sudo ./clash_forward.sh config <远程服务器IP> <端口>
+sudo ./sw.sh config <远程服务器IP> <端口>
 ```
 
 默认配置：
@@ -42,38 +42,38 @@ sudo ./clash_forward.sh config <远程服务器IP> <端口>
 ### 3. 启动流量转发
 
 ```bash
-sudo ./clash_forward.sh start
+sudo ./sw.sh start
 ```
 
 ### 4. 检查状态
 
 ```bash
-./clash_forward.sh status
+./sw.sh status
 ```
 
 ### 5. 停止流量转发
 
 ```bash
-sudo ./clash_forward.sh stop
+sudo ./sw.sh stop
 ```
 
 ## 📋 命令行参数
 
 | 命令 | 缩写 | 说明 | 权限 | 示例 |
 |------|------|------|------|------|
-| `start` | `s` | 启动流量转发 | root | `sudo ./clash_forward.sh s` |
-| `stop` | `x` | 停止流量转发 | root | `sudo ./clash_forward.sh x` |
-| `status` | `t` | 检查状态 | 无 | `./clash_forward.sh t` |
-| `restart` | `r` | 重启服务 | root | `sudo ./clash_forward.sh r` |
-| `config <ip> <port>` | `c` | 设置代理配置 | root | `sudo ./clash_forward.sh c 192.168.1.100 7890` |
-| `add-exemption <type> <value>` | `a` | 添加豁免规则 | root | `sudo ./clash_forward.sh a ip 192.168.1.100` |
-| `remove-exemption <type> <value>` | `rm` | 删除豁免规则 | root | `sudo ./clash_forward.sh rm ip 192.168.1.100` |
-| `remove-all-exemptions` | `ra` | 删除所有豁免规则 | root | `sudo ./clash_forward.sh ra` |
-| `list-exemptions` | `l` | 列出豁免规则 | 无 | `./clash_forward.sh l` |
-| `reset` | 无 | 完全重置系统 | root | `sudo ./clash_forward.sh reset` |
-| `reset -k` | 无 | 部分重置(保留豁免规则) | root | `sudo ./clash_forward.sh reset -k` |
-| 无参数 | `m` | 启动交互式菜单 | 无 | `./clash_forward.sh m` |
-| `help` | `h` | 显示帮助信息 | 无 | `./clash_forward.sh h` |
+| `start` | `s` | 启动流量转发 | root | `sudo ./sw.sh s` |
+| `stop` | `x` | 停止流量转发 | root | `sudo ./sw.sh x` |
+| `status` | `t` | 检查状态 | 无 | `./sw.sh t` |
+| `restart` | `r` | 重启服务 | root | `sudo ./sw.sh r` |
+| `config <ip> <port>` | `c` | 设置代理配置 | root | `sudo ./sw.sh c 192.168.1.100 7890` |
+| `add-exemption <type> <value>` | `a` | 添加豁免规则 | root | `sudo ./sw.sh a ip 192.168.1.100` |
+| `remove-exemption <type> <value>` | `rm` | 删除豁免规则 | root | `sudo ./sw.sh rm ip 192.168.1.100` |
+| `remove-all-exemptions` | `ra` | 删除所有豁免规则 | root | `sudo ./sw.sh ra` |
+| `list-exemptions` | `l` | 列出豁免规则 | 无 | `./sw.sh l` |
+| `reset` | 无 | 完全重置系统 | root | `sudo ./sw.sh reset` |
+| `reset -k` | 无 | 部分重置(保留豁免规则) | root | `sudo ./sw.sh reset -k` |
+| 无参数 | `m` | 启动交互式菜单 | 无 | `./sw.sh m` |
+| `help` | `h` | 显示帮助信息 | 无 | `./sw.sh h` |
 
 ## 🛡️ 自定义豁免规则
 
@@ -83,46 +83,46 @@ sudo ./clash_forward.sh stop
 
 ```bash
 # 单个IP
-sudo ./clash_forward.sh a ip 192.168.1.100
+sudo ./sw.sh a ip 192.168.1.100
 
 # 多个IP（逗号分隔）
-sudo ./clash_forward.sh a ip 192.168.1.100,192.168.1.101
+sudo ./sw.sh a ip 192.168.1.100,192.168.1.101
 ```
 
 ### 2. 域名豁免
 
 ```bash
 # 单个域名
-sudo ./clash_forward.sh a domain example.com
+sudo ./sw.sh a domain example.com
 
 # 多个域名
-sudo ./clash_forward.sh a domain example.com,google.com
+sudo ./sw.sh a domain example.com,google.com
 ```
 
 ### 3. 端口豁免
 
 ```bash
 # 单个端口
-sudo ./clash_forward.sh a port 8080
+sudo ./sw.sh a port 8080
 
 # 多个端口
-sudo ./clash_forward.sh a port 8080,9090,3306
+sudo ./sw.sh a port 8080,9090,3306
 ```
 
 ### 豁免规则管理
 
 ```bash
 # 列出所有规则
-./clash_forward.sh l
+./sw.sh l
 
 # 删除特定规则
-sudo ./clash_forward.sh rm ip 192.168.1.100
+sudo ./sw.sh rm ip 192.168.1.100
 
 # 删除所有规则
-sudo ./clash_forward.sh ra
+sudo ./sw.sh ra
 ```
 
-> **注意**：添加或删除豁免规则后，需要重启服务才能生效：`sudo ./clash_forward.sh r`
+> **注意**：添加或删除豁免规则后，需要重启服务才能生效：`sudo ./sw.sh r`
 
 ## ⚡ 技术实现
 
@@ -166,11 +166,11 @@ Clash Verge提供多种代理端口类型：
 
 ### 常见问题解决
 
-1. **检查状态**：`./clash_forward.sh t`
+1. **检查状态**：`./sw.sh t`
 2. **检查代理连通性**：`nc -z 192.168.1.100 7890`
 3. **查看服务日志**：`sudo journalctl -u redsocks -f`
 4. **恢复iptables规则**：`sudo iptables-restore < /etc/iptables/backup/rules.v4.last`
-5. **重置系统**：`sudo ./clash_forward.sh reset`
+5. **重置系统**：`sudo ./sw.sh reset`
 
 ### 配置文件位置
 
@@ -208,10 +208,10 @@ port=8080
 
 ```bash
 # 停止服务
-sudo ./clash_forward.sh x
+sudo ./sw.sh x
 
 # 使用重置功能彻底清理
-sudo ./clash_forward.sh reset
+sudo ./sw.sh reset
 
 # 或手动清理
 sudo systemctl stop redsocks
