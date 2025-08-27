@@ -51,7 +51,15 @@ sudo ./sw.sh start
 ./sw.sh status
 ```
 
-### 5. 停止流量转发
+### 5. 测试境外网站访问
+
+```bash
+./sw.sh test
+```
+
+该命令将测试访问多个境外主流网站，验证代理是否正常工作。
+
+### 6. 停止流量转发
 
 ```bash
 sudo ./sw.sh stop
