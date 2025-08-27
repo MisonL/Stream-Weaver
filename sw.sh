@@ -66,6 +66,7 @@ error() {
 # 重置系统到默认状态
 reset_system() {
     local reset_exemptions="${1:-yes}"  # 默认重置豁免规则
+    local uninstall_service="${2:-no}"   # 默认不卸载服务
     
     log "开始重置系统到默认状态..."
     
@@ -73,6 +74,30 @@ reset_system() {
     log "停止 redsocks 服务..."
     systemctl stop redsocks.service 2>/dev/null || true
     systemctl disable redsocks.service 2>/dev/null || true
+    
+    # 如果用户选择卸载服务，则卸载Stream Weaver服务
+    if [ "$uninstall_service" = "yes" ]; then
+        log "卸载 Stream Weaver 服务..."
+        # 停止服务
+        systemctl stop stream-weaver.service 2>/dev/null || true
+        
+        # 禁用服务
+        systemctl disable stream-weaver.service 2>/dev/null || true
+        
+        # 删除服务文件
+        local service_file="/etc/systemd/system/stream-weaver.service"
+        if [ -f "$service_file" ]; then
+            rm -f "$service_file"
+            log "已删除服务文件: $service_file"
+        fi
+        
+        # 删除系统级命令链接
+        local system_bin="/usr/local/bin/sw"
+        if [ -L "$system_bin" ] || [ -f "$system_bin" ]; then
+            rm -f "$system_bin"
+            log "已删除系统级命令链接: $system_bin"
+        fi
+    fi
     
     # 清理iptables规则
     log "清理 iptables 规则..."
@@ -109,6 +134,11 @@ reset_system() {
         echo "✅ 系统已重置到默认状态（包括豁免规则）"
     else
         echo "✅ 系统已重置到默认状态（保留豁免规则）"
+    fi
+    
+    if [ "$uninstall_service" = "yes" ]; then
+        echo "✅ Stream Weaver服务已卸载"
+        echo "✅ 系统级命令 'sw' 已移除"
     fi
 }
 
@@ -946,6 +976,26 @@ check_proxy_connectivity() {
 check_status() {
     echo "=== 流量转发状态检查 ==="
     
+    # 检查服务安装状态
+    local service_installed=false
+    local system_command_installed=false
+    
+    # 检查systemd服务是否安装
+    if [ -f "/etc/systemd/system/stream-weaver.service" ]; then
+        echo "✅ Stream Weaver服务: 已安装"
+        service_installed=true
+    else
+        echo "❌ Stream Weaver服务: 未安装"
+    fi
+    
+    # 检查系统级命令是否安装
+    if [ -L "/usr/local/bin/sw" ] || [ -f "/usr/local/bin/sw" ]; then
+        echo "✅ 系统级命令 'sw': 已安装"
+        system_command_installed=true
+    else
+        echo "❌ 系统级命令 'sw': 未安装"
+    fi
+    
     local service_running=false
     
     if [ "$USE_SYSTEMD" = true ]; then
@@ -1444,14 +1494,16 @@ interactive_menu() {
         echo "   7) ➖ 删除自定义豁免规则"
         echo "   8) 📋 列出自定义豁免规则"
         echo "   9) 🌐 测试境外网站访问"
-        echo "   10) 🗑️  重置系统到默认状态"
-        echo "   11) 📖 显示帮助"
+        echo "   10) 📦 安装为系统服务"
+        echo "   11) 🗑️  卸载系统服务"
+        echo "   12) 🗑️  重置系统到默认状态"
+        echo "   13) 📖 显示帮助"
         echo "   0) 🚪 退出"
         echo ""
         
         # 使用不同的方式读取输入，取决于是否在交互式终端中
         if [ $is_interactive -eq 1 ]; then
-            read -p "请选择操作 [0-11]: " choice
+            read -p "请选择操作 [0-13]: " choice
         else
             # 非交互式环境，从标准输入读取
             read choice
@@ -1774,6 +1826,46 @@ interactive_menu() {
                 wait_for_enter
                 ;;
             10)
+                echo "📦 安装为系统服务"
+                echo ""
+                echo "⚠️  此操作将安装Stream Weaver为系统服务"
+                echo "   安装后可以使用systemctl命令直接控制服务"
+                echo "   同时创建系统级命令 'sw'，可直接使用sw命令控制流量转发"
+                echo ""
+                read -p "确认安装服务? [y/N]: " confirm_install
+                if [[ $confirm_install =~ ^[Yy]$ ]]; then
+                    if [[ $EUID -eq 0 ]]; then
+                        install_service
+                    else
+                        echo "❌ 需要root权限来安装服务"
+                        echo "请使用: sudo $0 install-service"
+                    fi
+                else
+                    echo "❌ 服务安装已取消"
+                fi
+                wait_for_enter
+                ;;
+            11)
+                echo "🗑️  卸载系统服务"
+                echo ""
+                echo "⚠️  此操作将从系统中卸载Stream Weaver服务"
+                echo "   同时移除系统级命令 'sw'"
+                echo "   卸载后只能通过脚本命令控制流量转发"
+                echo ""
+                read -p "确认卸载服务? [y/N]: " confirm_uninstall
+                if [[ $confirm_uninstall =~ ^[Yy]$ ]]; then
+                    if [[ $EUID -eq 0 ]]; then
+                        uninstall_service
+                    else
+                        echo "❌ 需要root权限来卸载服务"
+                        echo "请使用: sudo $0 uninstall-service"
+                    fi
+                else
+                    echo "❌ 服务卸载已取消"
+                fi
+                wait_for_enter
+                ;;
+            12)
                 echo "🗑️  重置系统到默认状态"
                 echo ""
                 echo "⚠️  警告: 此操作将删除配置并停止服务"
@@ -1786,9 +1878,11 @@ interactive_menu() {
                 echo "请选择重置选项:"
                 echo "  1) 完全重置（删除所有配置，包括豁免规则）"
                 echo "  2) 部分重置（保留豁免规则）"
+                echo "  3) 完全重置并卸载服务"
+                echo "  4) 部分重置并卸载服务"
                 echo "  0) 取消操作"
                 echo ""
-                read -p "请选择 [1/2/0]: " reset_choice
+                read -p "请选择 [1/2/3/4/0]: " reset_choice
                 
                 case "$reset_choice" in
                     1)
@@ -1797,7 +1891,7 @@ interactive_menu() {
                         read -p "确认完全重置? [y/N]: " confirm_full
                         if [[ $confirm_full =~ ^[Yy]$ ]]; then
                             if [[ $EUID -eq 0 ]]; then
-                                reset_system "yes"
+                                reset_system "yes" "no"  # 重置豁免规则，不卸载服务
                             else
                                 echo "❌ 需要root权限来重置系统"
                                 echo "请使用: sudo $0 reset"
@@ -1812,7 +1906,7 @@ interactive_menu() {
                         read -p "确认部分重置? [y/N]: " confirm_partial
                         if [[ $confirm_partial =~ ^[Yy]$ ]]; then
                             if [[ $EUID -eq 0 ]]; then
-                                reset_system "no"
+                                reset_system "no" "no"  # 保留豁免规则，不卸载服务
                             else
                                 echo "❌ 需要root权限来重置系统"
                                 echo "请使用: sudo $0 reset"
@@ -1821,13 +1915,46 @@ interactive_menu() {
                             echo "❌ 部分重置操作已取消"
                         fi
                         ;;
+                    3)
+                        echo ""
+                        echo "⚠️  您将完全重置系统并卸载服务"
+                        echo "   包括删除所有豁免规则和服务文件"
+                        read -p "确认完全重置并卸载服务? [y/N]: " confirm_full_uninstall
+                        if [[ $confirm_full_uninstall =~ ^[Yy]$ ]]; then
+                            if [[ $EUID -eq 0 ]]; then
+                                reset_system "yes" "yes"  # 重置豁�规则，卸载服务
+                            else
+                                echo "❌ 需要root权限来重置系统"
+                                echo "请使用: sudo $0 reset"
+                            fi
+                        else
+                            echo "❌ 完全重置并卸载服务操作已取消"
+                        fi
+                        ;;
+                    4)
+                        echo ""
+                        echo "⚠️  您将部分重置系统并卸载服务"
+                        echo "   保留豁免规则，删除服务文件"
+                        read -p "确认部分重置并卸载服务? [y/N]: " confirm_partial_uninstall
+                        if [[ $confirm_partial_uninstall =~ ^[Yy]$ ]]; then
+                            if [[ $EUID -eq 0 ]]; then
+                                reset_system "no" "yes"  # 保留豁免规则，卸载服务
+                            else
+                                echo "❌ 需要root权限来重置系统"
+                                echo "请使用: sudo $0 reset"
+                            fi
+                        else
+                            echo "❌ 部分重置并卸载服务操作已取消"
+                        fi
+                        ;;
                     0|*)
                         echo "❌ 重置操作已取消"
                         ;;
                 esac
                 wait_for_enter
                 ;;
-            11)
+                
+            13)
                 show_help
                 wait_for_enter
                 ;;
@@ -1836,7 +1963,7 @@ interactive_menu() {
                 break
                 ;;
             *)
-                echo "❌ 无效选择，请输入 0-11"
+                echo "❌ 无效选择，请输入 0-13"
                 wait_for_enter
                 ;;
         esac
@@ -1924,6 +2051,116 @@ test_connectivity() {
     return 0
 }
 
+# 安装服务功能
+install_service() {
+    # 检查是否为root用户
+    if [[ $EUID -ne 0 ]]; then
+        echo "❌ 服务安装需要root权限"
+        echo "请使用: sudo $0 install-service"
+        exit 1
+    fi
+    
+    log "开始安装Stream Weaver服务..."
+    
+    # 获取脚本的绝对路径
+    local script_path=$(realpath "$0")
+    
+    # 创建systemd服务文件
+    local service_file="/etc/systemd/system/stream-weaver.service"
+    log "创建systemd服务文件: $service_file"
+    
+    cat > "$service_file" <<EOF
+[Unit]
+Description=Stream Weaver - Transparent proxy for Linux systems
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=$script_path start
+ExecStop=$script_path stop
+ExecReload=$script_path restart
+RemainAfterExit=yes
+User=root
+Group=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # 创建系统级命令链接
+    local system_bin="/usr/local/bin/sw"
+    log "创建系统级命令链接: $system_bin"
+    
+    # 创建符号链接
+    ln -sf "$script_path" "$system_bin"
+    chmod +x "$system_bin"
+    
+    # 重新加载systemd配置
+    systemctl daemon-reload
+    
+    # 启用服务
+    systemctl enable stream-weaver.service
+    
+    log "Stream Weaver服务安装完成"
+    echo "✅ Stream Weaver服务已安装并启用"
+    echo "ℹ️  现在可以使用以下命令控制服务:"
+    echo "   启动服务: sudo systemctl start stream-weaver"
+    echo "   停止服务: sudo systemctl stop stream-weaver"
+    echo "   重启服务: sudo systemctl restart stream-weaver"
+    echo "   查看状态: sudo systemctl status stream-weaver"
+    echo ""
+    echo "ℹ️  也可以直接使用sw命令控制流量转发:"
+    echo "   配置代理: sudo sw config <IP> <端口>"
+    echo "   启动转发: sudo sw start"
+    echo "   停止转发: sudo sw stop"
+    echo "   重启转发: sudo sw restart"
+    echo "   查看状态: sw status"
+    echo ""
+    echo "⚠️  注意: 使用服务模式前请确保已配置代理服务器"
+    echo "   配置命令: sudo $script_path config <IP> <端口>"
+}
+
+# 卸载服务功能
+uninstall_service() {
+    # 检查是否为root用户
+    if [[ $EUID -ne 0 ]]; then
+        echo "❌ 服务卸载需要root权限"
+        echo "请使用: sudo $0 uninstall-service"
+        exit 1
+    fi
+    
+    log "开始卸载Stream Weaver服务..."
+    
+    # 停止服务
+    systemctl stop stream-weaver.service 2>/dev/null || true
+    
+    # 禁用服务
+    systemctl disable stream-weaver.service 2>/dev/null || true
+    
+    # 删除服务文件
+    local service_file="/etc/systemd/system/stream-weaver.service"
+    if [ -f "$service_file" ]; then
+        rm -f "$service_file"
+        log "已删除服务文件: $service_file"
+    fi
+    
+    # 删除系统级命令链接
+    local system_bin="/usr/local/bin/sw"
+    if [ -L "$system_bin" ] || [ -f "$system_bin" ]; then
+        rm -f "$system_bin"
+        log "已删除系统级命令链接: $system_bin"
+    fi
+    
+    # 重新加载systemd配置
+    systemctl daemon-reload
+    
+    log "Stream Weaver服务卸载完成"
+    echo "✅ Stream Weaver服务已卸载"
+    echo "ℹ️  系统级命令 'sw' 已移除"
+}
+
 # 显示帮助信息
 show_help() {
     cat <<EOF
@@ -1942,7 +2179,9 @@ show_help() {
     remove-all-exemptions (ra)  删除所有自定义豁免规则
     list-exemptions (l)      列出所有自定义豁免规则
     test                     测试境外网站访问功能
-    reset [-k|--keep-exemptions]  重置系统到默认状态
+    install-service          安装为系统服务
+    uninstall-service        从系统中卸载服务
+    reset [-k|--keep-exemptions] [-u|--uninstall-service]  重置系统到默认状态
     menu (m)                 进入交互式菜单
     help (h)                 显示此帮助信息
 
@@ -1958,9 +2197,13 @@ show_help() {
     $0 a port 8080,9090,3306         # 豁免多个端口
     $0 l                             # 列出所有自定义豁免规则
     $0 test                          # 测试境外网站访问
+    $0 install-service               # 安装为系统服务
+    $0 uninstall-service             # 卸载服务
     $0 ra                            # 删除所有自定义豁免规则
     $0 reset                         # 完全重置系统（包括豁免规则）
     $0 reset -k                      # 部分重置系统（保留豁免规则）
+    $0 reset -u                      # 完全重置系统并卸载服务
+    $0 reset -k -u                   # 部分重置系统并卸载服务
     $0 m                             # 交互式菜单
     help (h)                 显示此帮助信息
 
@@ -1971,9 +2214,11 @@ show_help() {
 在交互式菜单的"重置系统"选项中，您可以:
     • 选择完全重置（删除所有配置，包括豁免规则）
     • 选择部分重置（保留豁免规则）
+    • 选择完全重置并卸载服务
+    • 选择部分重置并卸载服务
 
 ⚠️  注意:
-    • start(s)/stop(x)/restart(r)/config(c)/reset/add-exemption(a)/remove-exemption(rm)/remove-all-exemptions(ra) 命令需要 root 权限
+    • start(s)/stop(x)/restart(r)/config(c)/reset/add-exemption(a)/remove-exemption(rm)/remove-all-exemptions(ra)/install-service/uninstall-service 命令需要 root 权限
     • status(t)/menu(m)/help(h)/list-exemptions(l)/test 命令可以在普通用户下运行
     • 默认远程代理服务器: 192.168.1.100:7890
     • 配置文件位置: $CONFIG_FILE
@@ -1982,7 +2227,9 @@ show_help() {
 🔧 重置选项:
     • 使用 "reset" 命令完全重置系统（删除所有配置，包括豁免规则）
     • 使用 "reset -k" 或 "reset --keep-exemptions" 命令部分重置系统（保留豁免规则）
-    • 在交互式菜单中选择重置选项时，可选择完全重置或部分重置
+    • 使用 "reset -u" 或 "reset --uninstall-service" 命令重置系统并卸载服务
+    • 使用 "reset -k -u" 命令部分重置系统并卸载服务
+    • 在交互式菜单中选择重置选项时，可选择完全重置、部分重置、完全重置并卸载服务或部分重置并卸载服务
 
 🔍 功能特点:
     • 透明转发：无需配置应用程序
@@ -1992,6 +2239,14 @@ show_help() {
     • 批量添加：支持使用逗号分隔一次添加多个目标
     • 自动备份：启动前备份 iptables/ip6tables 规则
     • 错误恢复：异常退出时自动恢复规则
+
+🚀 安装服务后，您还可以直接使用 'sw' 命令:
+    sudo sw config 192.168.1.100 7890  # 配置代理服务器
+    sudo sw start                      # 启动流量转发
+    sudo sw stop                       # 停止流量转发
+    sudo sw restart                    # 重启流量转发
+    sw status                          # 检查状态
+    sw test                            # 测试境外网站访问
 EOF
 }
 
@@ -1999,7 +2254,7 @@ EOF
 needs_root_permission() {
     local command="$1"
     case "$command" in
-        start|s|stop|x|restart|r|config|c|reset|add-exemption|a|remove-exemption|rm|remove-all-exemptions|ra)
+        start|s|stop|x|restart|r|config|c|reset|add-exemption|a|remove-exemption|rm|remove-all-exemptions|ra|install-service|uninstall-service)
             return 0  # 需要root权限
             ;;
         status|t|help|--help|-h|h|menu|m|list-exemptions|l|test)
@@ -2053,12 +2308,45 @@ main() {
             # 对于测试命令，我们需要确保脚本正常退出而不是触发清理
             exit 0
             ;;
+        install-service)
+            install_service
+            ;;
+        uninstall-service)
+            uninstall_service
+            ;;
         reset)
             # 检查是否有参数指定是否重置豁免规则
-            if [ "${2:-}" = "--keep-exemptions" ] || [ "${2:-}" = "-k" ]; then
-                reset_system "no"
+            local reset_exemptions="yes"
+            local uninstall_service="no"
+            
+            # 解析命令行参数
+            shift  # 移除第一个参数（reset）
+            while [[ $# -gt 0 ]]; do
+                case $1 in
+                    --keep-exemptions|-k)
+                        reset_exemptions="no"
+                        shift
+                        ;;
+                    --uninstall-service|-u)
+                        uninstall_service="yes"
+                        shift
+                        ;;
+                    *)
+                        echo "❌ 未知参数: $1"
+                        echo "支持的参数:"
+                        echo "  -k, --keep-exemptions  保留豁免规则"
+                        echo "  -u, --uninstall-service  卸载服务"
+                        exit 1
+                        ;;
+                esac
+            done
+            
+            if [[ $EUID -eq 0 ]]; then
+                reset_system "$reset_exemptions" "$uninstall_service"
             else
-                reset_system "yes"
+                echo "❌ 需要root权限来重置系统"
+                echo "请使用: sudo $0 reset"
+                exit 1
             fi
             ;;
         menu|m)

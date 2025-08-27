@@ -80,6 +80,12 @@ sudo ./sw.sh reset
 
 # 部分重置系统（保留豁免规则）
 sudo ./sw.sh reset -k
+
+# 完全重置系统并卸载服务
+sudo ./sw.sh reset -u
+
+# 部分重置系统并卸载服务（保留豁免规则）
+sudo ./sw.sh reset -k -u
 ```
 
 ### 6. 使用交互式菜单
@@ -94,6 +100,39 @@ sudo ./sw.sh reset -k
 ```bash
 # 测试境外网站访问
 ./sw.sh test
+```
+
+### 8. 安装为系统服务
+
+```bash
+# 安装为系统服务
+sudo ./sw.sh install-service
+
+# 启动服务
+sudo systemctl start stream-weaver
+
+# 停止服务
+sudo systemctl stop stream-weaver
+
+# 重启服务
+sudo systemctl restart stream-weaver
+
+# 查看服务状态
+sudo systemctl status stream-weaver
+
+# 卸载服务
+sudo ./sw.sh uninstall-service
+
+# 安装服务后，可以直接使用sw命令
+sudo sw config 192.168.1.100 7890  # 配置代理服务器
+sudo sw start                      # 启动流量转发
+sudo sw stop                       # 停止流量转发
+sudo sw restart                    # 重启流量转发
+sw status                          # 检查状态
+sw test                            # 测试境外网站访问
+sw list-exemptions                 # 列出豁免规则
+sw add-exemption ip 192.168.1.100  # 添加IP豁免规则
+sw remove-exemption ip 192.168.1.100  # 删除IP豁免规则
 ```
 
 ## 交互式菜单详解
@@ -117,8 +156,10 @@ Stream Weaver提供了一个直观的交互式菜单界面，方便用户进行�
 7. **删除自定义豁免规则** - 删除特定的豁免规则或所有规则
 8. **列出自定义豁免规则** - 显示所有已配置的豁免规则
 9. **测试境外网站访问** - 测试访问多个境外主流网站，验证代理是否正常工作
-10. **重置系统到默认状态** - 完全重置系统或部分重置（保留豁免规则）
-11. **显示帮助** - 显示帮助信息
+10. **安装为系统服务** - 将Stream Weaver安装为系统服务
+11. **卸载系统服务** - 从系统中卸载Stream Weaver服务
+12. **重置系统到默认状态** - 完全重置系统或部分重置（保留豁免规则）
+13. **显示帮助** - 显示帮助信息
 
 交互式菜单会自动检测是否具有必要的权限，并在需要时提示您使用sudo。
 
@@ -141,3 +182,32 @@ LOCAL_REDIR_PORT="12345"          # redsocks本地端口
 - 豁免规则：`/etc/clash_forward/exemptions`
 
 可以直接编辑这些文件来修改配置，但需要重启服务才能生效。
+
+### 3. 使用系统级命令
+
+安装服务后，您可以直接使用 `sw` 命令而无需指定完整路径：
+
+```bash
+# 配置代理服务器
+sudo sw config 192.168.1.100 7890
+
+# 启动流量转发
+sudo sw start
+
+# 停止流量转发
+sudo sw stop
+
+# 重启流量转发
+sudo sw restart
+
+# 检查状态
+sw status
+
+# 测试境外网站访问
+sw test
+
+# 管理豁免规则
+sudo sw add-exemption ip 192.168.1.100
+sw list-exemptions
+sudo sw remove-exemption ip 192.168.1.100
+```
