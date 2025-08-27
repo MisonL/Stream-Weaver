@@ -206,7 +206,7 @@ port=8080
 
 ## 🗑️ 卸载清理
 
-```bash
+```
 # 停止服务
 sudo ./sw.sh x
 
@@ -224,4 +224,4 @@ sudo systemctl daemon-reload
 
 ## 📄 许可证
 
-MIT License
+本项目采用MIT许可证，详情请参见 [LICENSE](LICENSE) 文件。
