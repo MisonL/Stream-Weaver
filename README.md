@@ -1,6 +1,10 @@
+<div align="center">
+
 # 🌐 Stream Weaver - 流织者
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
 
 Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到远程Clash Verge代理服务器的工具。通过redsocks和iptables实现，像织布一样巧妙地编织和引导所有TCP流量通过远程代理进行路由。
 
