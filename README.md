@@ -1,11 +1,10 @@
-# 🔧 Linux系统流量转发到远程Clash Verge代理工具
 # 🌐 Stream Weaver - 流织者
 
-## 📖 功能简介
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到远程Clash Verge代理服务器的工具。通过redsocks和iptables实现，像织布一样巧妙地编织和引导所有TCP流量通过远程代理进行路由。
 
-### 🔍 功能特点
+## 📖 功能简介
 
 - **透明转发**：无需配置应用程序，自动转发所有TCP流量
 - **双栈支持**：同时支持IPv4和IPv6流量转发
@@ -77,7 +76,8 @@ sudo ./clash_forward.sh stop
 支持三种类型的豁免规则，使特定流量不通过代理：
 
 ### 1. IP地址豁免
-``bash
+
+```bash
 # 单个IP
 sudo ./clash_forward.sh a ip 192.168.1.100
 
@@ -86,7 +86,8 @@ sudo ./clash_forward.sh a ip 192.168.1.100,192.168.1.101
 ```
 
 ### 2. 域名豁免
-``bash
+
+```bash
 # 单个域名
 sudo ./clash_forward.sh a domain example.com
 
@@ -95,7 +96,8 @@ sudo ./clash_forward.sh a domain example.com,google.com
 ```
 
 ### 3. 端口豁免
-``bash
+
+```bash
 # 单个端口
 sudo ./clash_forward.sh a port 8080
 
@@ -104,6 +106,7 @@ sudo ./clash_forward.sh a port 8080,9090,3306
 ```
 
 ### 豁免规则管理
+
 ```bash
 # 列出所有规则
 ./clash_forward.sh l
@@ -120,6 +123,7 @@ sudo ./clash_forward.sh ra
 ## ⚡ 技术实现
 
 ### 工作流程
+
 本地应用程序 → iptables NAT → redsocks → 远程Clash Verge代理 → 目标服务器
 
 ### Clash Verge端口设置
@@ -157,6 +161,7 @@ Clash Verge提供多种代理端口类型：
 ## 🔍 故障排除
 
 ### 常见问题解决
+
 1. **检查状态**：`./clash_forward.sh t`
 2. **检查代理连通性**：`nc -z 192.168.1.100 7890`
 3. **查看服务日志**：`sudo journalctl -u redsocks -f`
@@ -164,6 +169,7 @@ Clash Verge提供多种代理端口类型：
 5. **重置系统**：`sudo ./clash_forward.sh reset`
 
 ### 配置文件位置
+
 - 代理配置：`/etc/clash_forward/config`
 - 豁免规则：`/etc/clash_forward/exemptions`
 - redsocks配置：`/etc/redsocks.conf`
@@ -172,7 +178,8 @@ Clash Verge提供多种代理端口类型：
 ## 🔧 高级配置
 
 ### 自定义默认设置
-``bash
+
+```bash
 # 脚本内变量
 DEFAULT_PROXY_IP="192.168.1.100"  # 默认代理IP
 DEFAULT_PROXY_PORT="7890"         # 默认代理端口
@@ -180,7 +187,8 @@ LOCAL_REDIR_PORT="12345"          # redsocks本地端口
 ```
 
 ### 配置文件格式
-``bash
+
+```bash
 # /etc/clash_forward/config
 PROXY_IP="192.168.1.100"
 PROXY_PORT="7890"
@@ -194,7 +202,7 @@ port=8080
 
 ## 🗑️ 卸载清理
 
-``bash
+```bash
 # 停止服务
 sudo ./clash_forward.sh x
 
