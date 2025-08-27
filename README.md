@@ -192,7 +192,7 @@ LOCAL_REDIR_PORT="12345"          # redsocks本地端口
 
 ### 配置文件格式
 
-```bash
+```
 # /etc/clash_forward/config
 PROXY_IP="192.168.1.100"
 PROXY_PORT="7890"
@@ -202,24 +202,6 @@ PROXY_PORT="7890"
 ip=192.168.1.100
 domain=example.com
 port=8080
-```
-
-## 🗑️ 卸载清理
-
-```
-# 停止服务
-sudo ./sw.sh x
-
-# 使用重置功能彻底清理
-sudo ./sw.sh reset
-
-# 或手动清理
-sudo systemctl stop redsocks
-sudo systemctl disable redsocks
-sudo rm -rf /etc/clash_forward/
-sudo rm -f /etc/redsocks.conf /etc/systemd/system/redsocks.service
-sudo rm -rf /etc/iptables/backup/
-sudo systemctl daemon-reload
 ```
 
 ## 📄 许可证

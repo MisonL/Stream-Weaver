@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Stream Weaver (流织者) - Linux系统流量转发到远程Clash Verge代理服务器工具
-# 作者: 系统管理员
+# 作者: Mison
 # 版本: 1.0
 # 描述: 将本地系统流量通过redsocks转发到远程Clash Verge代理服务器，像织布一样巧妙地编织和引导网络流
 
