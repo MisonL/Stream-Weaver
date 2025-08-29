@@ -19,7 +19,31 @@ Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到�
 - **命令缩写**：支持命令行参数缩写，提高使用便捷性
 - **灵活重置**：支持完全重置和部分重置（保留豁免规则）
 
+## 🖥️ 系统兼容性
+
+支持的Linux发行版：
+- **Ubuntu/Debian**：18.04/20.04/22.04/24.04, Debian 9/10/11/12
+- **CentOS/RedHat**：CentOS 7/8, RHEL 7/8/9, Rocky Linux 8/9, AlmaLinux 8/9
+
+自动适配系统包管理器和服务管理方式。
+
+## 🚀 一键安装
+
+只需一句命令即可完成Stream Weaver的下载和安装：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mison-organization/Stream-Weaver/main/sw.sh | sudo bash
+```
+
+如果希望同时安装为系统服务，可以使用：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Mison-organization/Stream-Weaver/main/sw.sh | sudo bash -s install-service
+```
+
 ## 🚀 快速开始
+
+> **注意**：如果使用了一键安装脚本，可跳过第1步（设置执行权限）。
 
 ### 1. 设置执行权限
 
@@ -123,6 +147,44 @@ sw list-exemptions                 # 列出豁免规则
 | 无参数 | `m` | 启动交互式菜单 | 无 | `./sw.sh m` |
 | `help` | `h` | 显示帮助信息 | 无 | `./sw.sh h` |
 
+## 🎛️ 交互式菜单使用
+
+除了命令行参数方式，Stream Weaver还提供了一个直观的交互式菜单界面，方便用户进行各种操作：
+
+```bash
+./sw.sh menu
+# 或者简写为
+./sw.sh m
+```
+
+在交互式菜单中，您可以：
+- 检查详细状态
+- 配置远程代理服务器
+- 启动/停止/重启流量转发
+- 添加/删除/列出自定义豁免规则
+- 测试境外网站访问
+- 安装/卸载系统服务
+- 重置系统到默认状态
+- 查看帮助信息
+
+交互式菜单包含以下功能选项：
+
+1. **检查详细状态** - 显示流量转发的详细状态信息
+2. **配置远程代理服务器** - 设置或修改远程Clash Verge代理服务器信息
+3. **启动流量转发** - 启动流量转发服务
+4. **停止流量转发** - 停止流量转发服务
+5. **重启流量转发** - 重启流量转发服务
+6. **添加自定义豁免规则** - 添加IP地址、域名或端口的豁免规则
+7. **删除自定义豁免规则** - 删除特定的豁免规则或所有规则
+8. **列出自定义豁免规则** - 显示所有已配置的豁免规则
+9. **测试境外网站访问** - 测试访问多个境外主流网站，验证代理是否正常工作
+10. **安装为系统服务** - 将Stream Weaver安装为系统服务
+11. **卸载系统服务** - 从系统中卸载Stream Weaver服务
+12. **重置系统到默认状态** - 完全重置系统或部分重置（保留豁免规则）
+13. **显示帮助** - 显示帮助信息
+
+交互式菜单会自动检测是否具有必要的权限，并在需要时提示您使用sudo。
+
 ## 🛡️ 自定义豁免规则
 
 支持三种类型的豁免规则，使特定流量不通过代理：
@@ -193,47 +255,6 @@ Clash Verge提供多种代理端口类型：
 
 设置方法：打开Clash Verge设置 → 端口设置 → 启用"混合代理端口"
 
-## 🖥️ 系统兼容性
-
-支持的Linux发行版：
-- **Ubuntu/Debian**：18.04/20.04/22.04/24.04, Debian 9/10/11/12
-- **CentOS/RedHat**：CentOS 7/8, RHEL 7/8/9, Rocky Linux 8/9, AlmaLinux 8/9
-
-自动适配系统包管理器和服务管理方式。
-
-## ⚠️ 使用须知
-
-1. 只代理TCP流量，UDP流量不受影响
-2. 自动跳过本地和私有网络流量
-3. 首次运行会自动安装必要依赖包
-4. 确保远程Clash Verge服务器正在运行
-5. 添加豁免规则后需重启服务生效
-6. 重置功能支持保留或删除豁免规则
-
-## 🔍 故障排除
-
-### 常见问题解决
-
-1. **检查状态**：`./sw.sh t`
-2. **检查代理连通性**：`nc -z 192.168.1.100 7890`
-3. **查看服务日志**：`sudo journalctl -u redsocks -f`
-4. **恢复iptables规则**：`sudo iptables-restore < /etc/iptables/backup/rules.v4.last`
-5. **重置系统**：`sudo ./sw.sh reset`
-
-状态检查现在会显示服务安装状态：
-- Stream Weaver服务安装状态
-- 系统级命令'sw'安装状态
-- redsocks服务运行状态
-- 流量转发状态
-- IP转发状态等
-
-### 配置文件位置
-
-- 代理配置：`/etc/clash_forward/config`
-- 豁免规则：`/etc/clash_forward/exemptions`
-- redsocks配置：`/etc/redsocks.conf`
-- iptables备份：`/etc/iptables/backup/`
-
 ## 🔧 高级配置
 
 ### 自定义默认设置
@@ -273,105 +294,43 @@ port=8080
 3. 完全重置并卸载服务（删除所有配置并卸载Stream Weaver服务）
 4. 部分重置并卸载服务（保留豁免规则并卸载Stream Weaver服务）
 
-## 📄 许可证
+## ⚠️ 使用须知
 
-本项目采用MIT许可证，详情请参见 [LICENSE](LICENSE) 文件。
+1. 只代理TCP流量，UDP流量不受影响
+2. 自动跳过本地和私有网络流量
+3. 首次运行会自动安装必要依赖包
+4. 确保远程Clash Verge服务器正在运行
+5. 添加豁免规则后需重启服务生效
+6. 重置功能支持保留或删除豁免规则
+
+## 🔍 故障排除
+
+### 常见问题解决
+
+1. **检查状态**：`./sw.sh t`
+2. **检查代理连通性**：`nc -z 192.168.1.100 7890`
+3. **查看服务日志**：`sudo journalctl -u redsocks -f`
+4. **恢复iptables规则**：`sudo iptables-restore < /etc/iptables/backup/rules.v4.last`
+5. **重置系统**：`sudo ./sw.sh reset`
+
+状态检查现在会显示服务安装状态：
+- Stream Weaver服务安装状态
+- 系统级命令'sw'安装状态
+- redsocks服务运行状态
+- 流量转发状态
+- IP转发状态等
+
+### 配置文件位置
+
+- 代理配置：`/etc/clash_forward/config`
+- 豁免规则：`/etc/clash_forward/exemptions`
+- redsocks配置：`/etc/redsocks.conf`
+- iptables备份：`/etc/iptables/backup/`
 
 ## 📘 使用示例
 
 更多使用示例请参见 [EXAMPLES.md](EXAMPLES.md) 文件。
 
-## 交互式菜单详解
+## 📄 许可证
 
-Stream Weaver提供了一个直观的交互式菜单界面，方便用户进行各种操作。要启动交互式菜单，只需运行：
-
-```bash
-./sw.sh menu
-# 或者使用简写
-./sw.sh m
-```
-
-交互式菜单包含以下功能选项：
-
-1. **检查详细状态** - 显示流量转发的详细状态信息
-2. **配置远程代理服务器** - 设置或修改远程Clash Verge代理服务器信息
-3. **启动流量转发** - 启动流量转发服务
-4. **停止流量转发** - 停止流量转发服务
-5. **重启流量转发** - 重启流量转发服务
-6. **添加自定义豁免规则** - 添加IP地址、域名或端口的豁免规则
-7. **删除自定义豁免规则** - 删除特定的豁免规则或所有规则
-8. **列出自定义豁免规则** - 显示所有已配置的豁免规则
-9. **测试境外网站访问** - 测试访问多个境外主流网站，验证代理是否正常工作
-10. **安装为系统服务** - 将Stream Weaver安装为系统服务
-11. **卸载系统服务** - 从系统中卸载Stream Weaver服务
-12. **重置系统到默认状态** - 完全重置系统或部分重置（保留豁免规则）
-13. **显示帮助** - 显示帮助信息
-
-交互式菜单会自动检测是否具有必要的权限，并在需要时提示您使用sudo。
-
-### 7. 安装为系统服务
-
-```
-# 安装为系统服务
-sudo ./sw.sh install-service
-
-# 启动服务
-sudo systemctl start stream-weaver
-
-# 停止服务
-sudo systemctl stop stream-weaver
-
-# 重启服务
-sudo systemctl restart stream-weaver
-
-# 查看服务状态
-sudo systemctl status stream-weaver
-
-# 卸载服务
-sudo ./sw.sh uninstall-service
-
-# 安装服务后，可以直接使用sw命令
-sudo sw config 192.168.1.100 7890  # 配置代理服务器
-sudo sw start                      # 启动流量转发
-sudo sw stop                       # 停止流量转发
-sudo sw restart                    # 重启流量转发
-sw status                          # 检查状态
-sw test                            # 测试境外网站访问
-sw list-exemptions                 # 列出豁免规则
-```
-
-## 🎛️ 交互式菜单使用
-
-除了命令行参数方式，Stream Weaver还提供了一个直观的交互式菜单界面，方便用户进行各种操作：
-
-```bash
-./sw.sh menu
-# 或者简写为
-./sw.sh m
-```
-
-在交互式菜单中，您可以：
-- 检查详细状态
-- 配置远程代理服务器
-- 启动/停止/重启流量转发
-- 添加/删除/列出自定义豁免规则
-- 测试境外网站访问
-- 安装/卸载系统服务
-- 重置系统到默认状态
-- 查看帮助信息
-
-交互式菜单会自动检测是否具有必要的权限，并在需要时提示您使用sudo。
-./sw.sh m
-```
-
-在交互式菜单中，您可以：
-- 检查详细状态
-- 配置远程代理服务器
-- 启动/停止/重启流量转发
-- 添加/删除/列出自定义豁免规则
-- 测试境外网站访问
-- 安装/卸载系统服务
-- 重置系统到默认状态
-- 查看帮助信息
-
-交互式菜单会自动检测是否具有必要的权限，并在需要时提示您使用sudo。
+本项目采用MIT许可证，详情请参见 [LICENSE](LICENSE) 文件。

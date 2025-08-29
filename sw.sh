@@ -5,6 +5,150 @@
 # 版本: 1.0
 # 描述: 将本地系统流量通过redsocks转发到远程Clash Verge代理服务器，像织布一样巧妙地编织和引导网络流
 
+# 检查是否通过管道运行（没有脚本文件名参数）
+if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
+    # 管道运行模式 - 保存脚本并执行一键安装
+    
+    # 设置严格模式
+    if [[ "${1:-}" == "test" ]]; then
+        set -uo pipefail  # 禁用-e选项，允许命令失败
+    else
+        set -euo pipefail  # 严格模式
+    fi
+    
+    # 颜色定义
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    NC='\033[0m' # No Color
+    
+    # 日志函数
+    log() {
+        echo -e "${GREEN}[INFO]${NC} $1"
+    }
+    
+    warn() {
+        echo -e "${YELLOW}[WARN]${NC} $1"
+    }
+    
+    error() {
+        echo -e "${RED}[ERROR]${NC} $1" >&2
+    }
+    
+    # 检查是否以root权限运行
+    check_root() {
+        if [[ $EUID -eq 0 ]]; then
+            error "此安装脚本不应以root权限运行"
+            exit 1
+        fi
+    }
+    
+    # 检测系统类型
+    detect_system() {
+        if command -v apt-get &>/dev/null; then
+            SYSTEM_TYPE="debian"
+        elif command -v yum &>/dev/null; then
+            SYSTEM_TYPE="redhat"
+        elif command -v dnf &>/dev/null; then
+            SYSTEM_TYPE="redhat"
+        else
+            error "不支持的操作系统类型"
+            exit 1
+        fi
+        
+        log "检测到系统类型: $SYSTEM_TYPE"
+    }
+    
+    # 保存脚本到本地文件
+    save_script() {
+        log "正在保存Stream Weaver脚本..."
+        
+        # 从标准输入读取脚本内容并保存
+        cat > sw.sh
+        
+        # 检查保存是否成功
+        if [ ! -f sw.sh ]; then
+            error "脚本保存失败"
+            exit 1
+        fi
+        
+        # 设置执行权限
+        chmod +x sw.sh
+        
+        log "Stream Weaver脚本保存完成"
+    }
+    
+    # 安装为系统服务
+    install_service() {
+        log "正在安装为系统服务..."
+        sudo ./sw.sh install-service
+        log "系统服务安装完成"
+        
+        # 创建系统级命令链接
+        if [ ! -f "/usr/local/bin/sw" ]; then
+            log "正在创建系统级命令链接..."
+            sudo ln -s "$(pwd)/sw.sh" /usr/local/bin/sw
+            log "系统级命令 'sw' 创建完成"
+        fi
+    }
+    
+    # 显示使用说明
+    show_usage() {
+        echo ""
+        echo "✅ Stream Weaver安装完成！"
+        echo ""
+        echo "使用方法:"
+        echo "  1. 配置远程代理服务器:"
+        echo "     sudo ./sw.sh config <远程服务器IP> <端口>"
+        echo "     例如: sudo ./sw.sh config 192.168.1.100 7890"
+        echo ""
+        echo "  2. 启动流量转发:"
+        echo "     sudo ./sw.sh start"
+        echo ""
+        echo "  3. 检查状态:"
+        echo "     ./sw.sh status"
+        echo ""
+        echo "  4. 停止流量转发:"
+        echo "     sudo ./sw.sh stop"
+        echo ""
+        echo "命令缩写:"
+        echo "  sudo ./sw.sh c <IP> <端口>   # 配置代理"
+        echo "  sudo ./sw.sh s               # 启动转发"
+        echo "  sudo ./sw.sh x               # 停止转发"
+        echo "  ./sw.sh t                    # 检查状态"
+        echo ""
+        echo "交互式菜单:"
+        echo "  ./sw.sh menu"
+        echo "  或 ./sw.sh m"
+        echo ""
+    }
+    
+    # 管道运行主函数
+    main() {
+        # 检查是否有数据可以通过管道读取
+        if [ ! -t 0 ]; then
+            # 保存脚本
+            save_script
+            
+            # 检查是否需要安装为系统服务
+            if [ "${1:-}" = "install-service" ]; then
+                install_service
+            fi
+            
+            show_usage
+        else
+            error "脚本未通过管道运行，无法执行一键安装"
+            exit 1
+        fi
+    }
+    
+    # 执行主函数
+    main "$@"
+    
+    # 退出以避免执行脚本的其余部分
+    exit 0
+fi
+
 # 对于测试功能，我们暂时禁用严格模式
 if [[ "${1:-}" == "test" ]]; then
     set -uo pipefail  # 禁用-e选项，允许命令失败
