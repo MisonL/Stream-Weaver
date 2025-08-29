@@ -45,11 +45,16 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
     check_root() {
         # 在管道模式下，我们使用sudo来执行需要root权限的操作，所以不需要这个检查
         # 只在非管道模式下检查
+        # 管道模式下BASH_SOURCE[0]通常是空字符串或"bash"
+        log "调试信息: BASH_SOURCE[0]='${BASH_SOURCE[0]}', EUID=$EUID"
         if [[ "${BASH_SOURCE[0]}" != "" && "${BASH_SOURCE[0]}" != "bash" ]]; then
+            log "非管道模式检查"
             if [[ $EUID -eq 0 ]]; then
                 error "此脚本不应以root权限运行"
                 exit 1
             fi
+        else
+            log "管道模式，跳过权限检查"
         fi
     }
     
