@@ -1203,12 +1203,23 @@ check_status() {
     
     # 检查redsocks服务状态
     if [ "$USE_SYSTEMD" = true ]; then
-        # 使用超时机制避免命令卡住
-        if timeout 5 systemctl is-active --quiet redsocks.service 2>/dev/null; then
-            echo "✅ redsocks 服务: 运行中"
-            service_running=true
+        # 使用超时机制避免命令卡住，并在管道模式下使用更安全的方式
+        if [ -t 0 ]; then
+            # 交互式终端
+            if timeout 5 systemctl is-active --quiet redsocks.service 2>/dev/null; then
+                echo "✅ redsocks 服务: 运行中"
+                service_running=true
+            else
+                echo "❌ redsocks 服务: 未运行"
+            fi
         else
-            echo "❌ redsocks 服务: 未运行"
+            # 非交互式环境（管道模式）
+            if systemctl is-active --quiet redsocks.service 2>/dev/null; then
+                echo "✅ redsocks 服务: 运行中"
+                service_running=true
+            else
+                echo "❌ redsocks 服务: 未运行"
+            fi
         fi
     else
         # 检查redsocks进程
@@ -1227,20 +1238,42 @@ check_status() {
             local ipv6_rules=false
             
             # 检查IPv4规则，使用超时机制避免命令卡住
-            if timeout 5 iptables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD"; then
-                echo "✅ IPv4 iptables 规则: 已配置"
-                ipv4_rules=true
+            if [ -t 0 ]; then
+                # 交互式终端
+                if timeout 5 iptables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD"; then
+                    echo "✅ IPv4 iptables 规则: 已配置"
+                    ipv4_rules=true
+                else
+                    echo "❌ IPv4 iptables 规则: 未配置"
+                fi
             else
-                echo "❌ IPv4 iptables 规则: 未配置"
+                # 非交互式环境（管道模式）
+                if iptables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD"; then
+                    echo "✅ IPv4 iptables 规则: 已配置"
+                    ipv4_rules=true
+                else
+                    echo "❌ IPv4 iptables 规则: 未配置"
+                fi
             fi
             
             # 检查IPv6规则，使用超时机制避免命令卡住
             if command -v ip6tables >/dev/null 2>&1; then
-                if timeout 5 ip6tables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD6"; then
-                    echo "✅ IPv6 ip6tables 规则: 已配置"
-                    ipv6_rules=true
+                if [ -t 0 ]; then
+                    # 交互式终端
+                    if timeout 5 ip6tables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD6"; then
+                        echo "✅ IPv6 ip6tables 规则: 已配置"
+                        ipv6_rules=true
+                    else
+                        echo "❌ IPv6 ip6tables 规则: 未配置"
+                    fi
                 else
-                    echo "❌ IPv6 ip6tables 规则: 未配置"
+                    # 非交互式环境（管道模式）
+                    if ip6tables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD6"; then
+                        echo "✅ IPv6 ip6tables 规则: 已配置"
+                        ipv6_rules=true
+                    else
+                        echo "❌ IPv6 ip6tables 规则: 未配置"
+                    fi
                 fi
             else
                 echo "⚠️  IPv6 ip6tables: 不可用"
@@ -1265,10 +1298,20 @@ check_status() {
             echo "📡 远程代理服务器: $PROXY_IP:$PROXY_PORT"
             
             # 检查连通性，使用超时机制避免命令卡住
-            if timeout 10 check_proxy_connectivity; then
-                echo "🌐 代理连通性: 正常"
+            if [ -t 0 ]; then
+                # 交互式终端
+                if timeout 10 check_proxy_connectivity; then
+                    echo "🌐 代理连通性: 正常"
+                else
+                    echo "⚠️  代理连通性: 异常"
+                fi
             else
-                echo "⚠️  代理连通性: 异常"
+                # 非交互式环境（管道模式）
+                if check_proxy_connectivity; then
+                    echo "🌐 代理连通性: 正常"
+                else
+                    echo "⚠️  代理连通性: 异常"
+                fi
             fi
         else
             echo "⚠️  iptables 规则: 需要root权限检查"
@@ -1281,10 +1324,22 @@ check_status() {
         if [[ $EUID -eq 0 ]] && [ "$USE_SYSTEMD" = true ]; then
             echo ""
             echo "📋 服务状态详情:"
-            timeout 5 systemctl status redsocks.service | head -n 10 || true
+            if [ -t 0 ]; then
+                # 交互式终端
+                timeout 5 systemctl status redsocks.service | head -n 10 || true
+            else
+                # 非交互式环境（管道模式）
+                systemctl status redsocks.service | head -n 10 || true
+            fi
             echo ""
             echo "📋 最近日志:"
-            timeout 5 journalctl -u redsocks.service -n 5 --no-pager || true
+            if [ -t 0 ]; then
+                # 交互式终端
+                timeout 5 journalctl -u redsocks.service -n 5 --no-pager || true
+            else
+                # 非交互式环境（管道模式）
+                journalctl -u redsocks.service -n 5 --no-pager || true
+            fi
         elif [[ $EUID -eq 0 ]] && [ "$USE_SYSTEMD" = false ]; then
             echo ""
             echo "ℹ️  提示: 使用 'ps aux | grep redsocks' 查看进程信息"
