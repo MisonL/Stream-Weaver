@@ -29,16 +29,16 @@ Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到�
 
 ## 🚀 一键安装
 
-只需一句命令即可完成Stream Weaver的下载和安装：
+只需一句命令即可完成Stream Weaver的下载和安装，并立即启动交互式菜单：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MisonL/Stream-Weaver/master/sw.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/MisonL/Stream-Weaver/master/install.sh | sudo bash
 ```
 
-如果希望同时安装为系统服务，可以使用：
+如果希望仅下载安装但不启动交互式菜单，可以使用：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MisonL/Stream-Weaver/master/sw.sh | sudo bash -s install-service
+curl -fsSL https://raw.githubusercontent.com/MisonL/Stream-Weaver/master/install.sh | sudo bash -s -- no-menu
 ```
 
 ## 🚀 快速开始
