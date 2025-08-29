@@ -1201,9 +1201,10 @@ check_status() {
     
     local service_running=false
     
+    # 检查redsocks服务状态
     if [ "$USE_SYSTEMD" = true ]; then
-        # 检查redsocks服务状态
-        if systemctl is-active --quiet redsocks.service 2>/dev/null; then
+        # 使用超时机制避免命令卡住
+        if timeout 5 systemctl is-active --quiet redsocks.service 2>/dev/null; then
             echo "✅ redsocks 服务: 运行中"
             service_running=true
         else
@@ -1225,17 +1226,17 @@ check_status() {
             local ipv4_rules=false
             local ipv6_rules=false
             
-            # 检查IPv4规则
-            if iptables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD"; then
+            # 检查IPv4规则，使用超时机制避免命令卡住
+            if timeout 5 iptables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD"; then
                 echo "✅ IPv4 iptables 规则: 已配置"
                 ipv4_rules=true
             else
                 echo "❌ IPv4 iptables 规则: 未配置"
             fi
             
-            # 检查IPv6规则
+            # 检查IPv6规则，使用超时机制避免命令卡住
             if command -v ip6tables >/dev/null 2>&1; then
-                if ip6tables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD6"; then
+                if timeout 5 ip6tables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD6"; then
                     echo "✅ IPv6 ip6tables 规则: 已配置"
                     ipv6_rules=true
                 else
@@ -1263,8 +1264,8 @@ check_status() {
             load_config
             echo "📡 远程代理服务器: $PROXY_IP:$PROXY_PORT"
             
-            # 检查连通性
-            if check_proxy_connectivity; then
+            # 检查连通性，使用超时机制避免命令卡住
+            if timeout 10 check_proxy_connectivity; then
                 echo "🌐 代理连通性: 正常"
             else
                 echo "⚠️  代理连通性: 异常"
@@ -1280,10 +1281,10 @@ check_status() {
         if [[ $EUID -eq 0 ]] && [ "$USE_SYSTEMD" = true ]; then
             echo ""
             echo "📋 服务状态详情:"
-            systemctl status redsocks.service | head -n 10 || true
+            timeout 5 systemctl status redsocks.service | head -n 10 || true
             echo ""
             echo "📋 最近日志:"
-            journalctl -u redsocks.service -n 5 --no-pager || true
+            timeout 5 journalctl -u redsocks.service -n 5 --no-pager || true
         elif [[ $EUID -eq 0 ]] && [ "$USE_SYSTEMD" = false ]; then
             echo ""
             echo "ℹ️  提示: 使用 'ps aux | grep redsocks' 查看进程信息"
