@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 # Stream Weaver (流织者) - Linux系统流量转发到远程Clash Verge代理服务器工具
@@ -130,9 +131,15 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
             # 保存脚本
             save_script
             
-            # 检查是否需要安装为系统服务
+            # 检查参数决定行为
             if [ "${1:-}" = "install-service" ]; then
                 install_service
+            elif [ "${1:-}" = "" ]; then
+                # 不带参数时直接进入交互式菜单
+                show_usage
+                echo "正在启动交互式菜单..."
+                sudo ./sw.sh menu
+                exit 0
             fi
             
             show_usage
