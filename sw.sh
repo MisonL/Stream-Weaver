@@ -43,9 +43,13 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
     
     # 检查是否为root用户
     check_root() {
-        if [[ $EUID -eq 0 ]]; then
-            error "此脚本不应以root权限运行"
-            exit 1
+        # 在管道模式下，我们使用sudo来执行需要root权限的操作，所以不需要这个检查
+        # 只在非管道模式下检查
+        if [[ "${BASH_SOURCE[0]}" != "" && "${BASH_SOURCE[0]}" != "bash" ]]; then
+            if [[ $EUID -eq 0 ]]; then
+                error "此脚本不应以root权限运行"
+                exit 1
+            fi
         fi
     }
     
@@ -95,17 +99,28 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
     save_script() {
         log "正在保存Stream Weaver脚本..."
         
-        # 从标准输入读取脚本内容并保存到系统目录
-        sudo tee /usr/local/bin/sw > /dev/null
+        # 创建临时文件
+        local temp_script=$(mktemp)
+        
+        # 从标准输入读取脚本内容并保存到临时文件
+        cat > "$temp_script"
         
         # 检查保存是否成功
-        if [ ! -f /usr/local/bin/sw ]; then
-            error "脚本保存失败"
+        if [ ! -f "$temp_script" ]; then
+            error "脚本保存到临时文件失败"
             exit 1
         fi
         
-        # 设置执行权限
+        # 移动到系统目录
+        sudo mkdir -p /usr/local/bin
+        sudo mv "$temp_script" /usr/local/bin/sw
         sudo chmod +x /usr/local/bin/sw
+        
+        # 检查最终保存是否成功
+        if [ ! -f /usr/local/bin/sw ]; then
+            error "脚本保存到系统目录失败"
+            exit 1
+        fi
         
         success "脚本已安装到 /usr/local/bin/sw"
     }
