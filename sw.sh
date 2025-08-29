@@ -1708,8 +1708,8 @@ interactive_menu() {
         if [ $is_interactive -eq 1 ]; then
             read -p "请选择操作 [0-13]: " choice
         else
-            # 非交互式环境，从标准输入读取
-            read choice
+            # 非交互式环境，从终端读取输入
+            read -p "请选择操作 [0-13]: " choice </dev/tty
         fi
         echo ""
         
