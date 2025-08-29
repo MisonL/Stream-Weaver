@@ -140,7 +140,14 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
     start_interactive_menu() {
         log "启动交互式菜单..."
         # 确保在交互式终端中运行菜单
-        exec sudo /usr/local/bin/sw menu </dev/tty >/dev/tty 2>&1
+        # 在管道模式下，直接调用交互式菜单函数而不是通过exec
+        if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
+            # 管道模式下直接调用菜单
+            interactive_menu
+        else
+            # 正常模式下使用exec
+            exec sudo /usr/local/bin/sw menu </dev/tty >/dev/tty 2>&1
+        fi
     }
     
     # 管道运行主函数
