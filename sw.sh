@@ -139,7 +139,8 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
     # 启动交互式菜单
     start_interactive_menu() {
         log "启动交互式菜单..."
-        exec sudo /usr/local/bin/sw menu
+        # 重定向标准输入以确保在交互式环境中运行
+        exec sudo /usr/local/bin/sw menu < /dev/tty
     }
     
     # 管道运行主函数
