@@ -2296,9 +2296,14 @@ EOF
     local system_bin="/usr/local/bin/sw"
     log "创建系统级命令链接: $system_bin"
     
-    # 创建符号链接
-    ln -sf "$script_path" "$system_bin"
-    chmod +x "$system_bin"
+    # 检查是否在管道模式下运行（脚本路径和目标路径相同）
+    if [ "$script_path" = "$system_bin" ]; then
+        log "在管道模式下运行，跳过创建符号链接"
+    else
+        # 创建符号链接
+        ln -sf "$script_path" "$system_bin"
+        chmod +x "$system_bin"
+    fi
     
     # 重新加载systemd配置
     systemctl daemon-reload
