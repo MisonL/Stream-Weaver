@@ -103,8 +103,11 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
         # 创建临时文件
         local temp_script=$(mktemp)
         
-        # 从标准输入读取脚本内容并保存到临时文件
-        cat > "$temp_script"
+        # 添加正确的 shebang 行，确保脚本使用 bash 执行
+        echo "#!/bin/bash" > "$temp_script"
+        
+        # 从标准输入读取脚本内容并追加到临时文件（跳过第一行）
+        tail -n +2 > "$temp_script"
         
         # 检查保存是否成功
         if [ ! -f "$temp_script" ]; then
