@@ -1179,6 +1179,12 @@ check_proxy_connectivity() {
 check_status() {
     echo "=== 流量转发状态检查 ==="
     
+    # 检查是否在管道模式下运行
+    local is_pipe_mode=false
+    if [ ! -t 0 ]; then
+        is_pipe_mode=true
+    fi
+    
     # 检查服务安装状态
     local service_installed=false
     local system_command_installed=false
@@ -1204,7 +1210,7 @@ check_status() {
     # 检查redsocks服务状态
     if [ "$USE_SYSTEMD" = true ]; then
         # 使用超时机制避免命令卡住，并在管道模式下使用更安全的方式
-        if [ -t 0 ]; then
+        if [ "$is_pipe_mode" = false ] && [ -t 0 ]; then
             # 交互式终端
             if timeout 5 systemctl is-active --quiet redsocks.service 2>/dev/null; then
                 echo "✅ redsocks 服务: 运行中"
@@ -1213,7 +1219,7 @@ check_status() {
                 echo "❌ redsocks 服务: 未运行"
             fi
         else
-            # 非交互式环境（管道模式）
+            # 非交互式环境（管道模式）或非交互式终端
             if systemctl is-active --quiet redsocks.service 2>/dev/null; then
                 echo "✅ redsocks 服务: 运行中"
                 service_running=true
@@ -1238,7 +1244,7 @@ check_status() {
             local ipv6_rules=false
             
             # 检查IPv4规则，使用超时机制避免命令卡住
-            if [ -t 0 ]; then
+            if [ "$is_pipe_mode" = false ] && [ -t 0 ]; then
                 # 交互式终端
                 if timeout 5 iptables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD"; then
                     echo "✅ IPv4 iptables 规则: 已配置"
@@ -1247,7 +1253,7 @@ check_status() {
                     echo "❌ IPv4 iptables 规则: 未配置"
                 fi
             else
-                # 非交互式环境（管道模式）
+                # 非交互式环境（管道模式）或非交互式终端
                 if iptables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD"; then
                     echo "✅ IPv4 iptables 规则: 已配置"
                     ipv4_rules=true
@@ -1258,7 +1264,7 @@ check_status() {
             
             # 检查IPv6规则，使用超时机制避免命令卡住
             if command -v ip6tables >/dev/null 2>&1; then
-                if [ -t 0 ]; then
+                if [ "$is_pipe_mode" = false ] && [ -t 0 ]; then
                     # 交互式终端
                     if timeout 5 ip6tables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD6"; then
                         echo "✅ IPv6 ip6tables 规则: 已配置"
@@ -1267,7 +1273,7 @@ check_status() {
                         echo "❌ IPv6 ip6tables 规则: 未配置"
                     fi
                 else
-                    # 非交互式环境（管道模式）
+                    # 非交互式环境（管道模式）或非交互式终端
                     if ip6tables -t nat -L OUTPUT 2>/dev/null | grep -q "CLASH_FORWARD6"; then
                         echo "✅ IPv6 ip6tables 规则: 已配置"
                         ipv6_rules=true
@@ -1298,7 +1304,7 @@ check_status() {
             echo "📡 远程代理服务器: $PROXY_IP:$PROXY_PORT"
             
             # 检查连通性，使用超时机制避免命令卡住
-            if [ -t 0 ]; then
+            if [ "$is_pipe_mode" = false ] && [ -t 0 ]; then
                 # 交互式终端
                 if timeout 10 check_proxy_connectivity; then
                     echo "🌐 代理连通性: 正常"
@@ -1306,7 +1312,7 @@ check_status() {
                     echo "⚠️  代理连通性: 异常"
                 fi
             else
-                # 非交互式环境（管道模式）
+                # 非交互式环境（管道模式）或非交互式终端
                 if check_proxy_connectivity; then
                     echo "🌐 代理连通性: 正常"
                 else
@@ -1324,20 +1330,20 @@ check_status() {
         if [[ $EUID -eq 0 ]] && [ "$USE_SYSTEMD" = true ]; then
             echo ""
             echo "📋 服务状态详情:"
-            if [ -t 0 ]; then
+            if [ "$is_pipe_mode" = false ] && [ -t 0 ]; then
                 # 交互式终端
                 timeout 5 systemctl status redsocks.service | head -n 10 || true
             else
-                # 非交互式环境（管道模式）
+                # 非交互式环境（管道模式）或非交互式终端
                 systemctl status redsocks.service | head -n 10 || true
             fi
             echo ""
             echo "📋 最近日志:"
-            if [ -t 0 ]; then
+            if [ "$is_pipe_mode" = false ] && [ -t 0 ]; then
                 # 交互式终端
                 timeout 5 journalctl -u redsocks.service -n 5 --no-pager || true
             else
-                # 非交互式环境（管道模式）
+                # 非交互式环境（管道模式）或非交互式终端
                 journalctl -u redsocks.service -n 5 --no-pager || true
             fi
         elif [[ $EUID -eq 0 ]] && [ "$USE_SYSTEMD" = false ]; then
