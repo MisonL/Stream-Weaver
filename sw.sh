@@ -21,11 +21,12 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
     RED='\033[0;31m'
     GREEN='\033[0;32m'
     YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'
     NC='\033[0m' # No Color
     
     # 日志函数
     log() {
-        echo -e "${GREEN}[INFO]${NC} $1"
+        echo -e "${BLUE}[INFO]${NC} $1"
     }
     
     warn() {
@@ -36,113 +37,143 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
         echo -e "${RED}[ERROR]${NC} $1" >&2
     }
     
-    # 检查是否以root权限运行
+    success() {
+        echo -e "${GREEN}[SUCCESS]${NC} $1"
+    }
+    
+    # 检查是否为root用户
     check_root() {
         if [[ $EUID -eq 0 ]]; then
-            error "此安装脚本不应以root权限运行"
+            error "此脚本不应以root权限运行"
             exit 1
         fi
     }
     
-    # 检测系统类型
+    # 检查系统类型
     detect_system() {
-        if command -v apt-get &>/dev/null; then
+        if command -v apt-get >/dev/null 2>&1; then
             SYSTEM_TYPE="debian"
-        elif command -v yum &>/dev/null; then
-            SYSTEM_TYPE="redhat"
-        elif command -v dnf &>/dev/null; then
-            SYSTEM_TYPE="redhat"
+        elif command -v dnf >/dev/null 2>&1; then
+            SYSTEM_TYPE="fedora"
+        elif command -v yum >/dev/null 2>&1; then
+            SYSTEM_TYPE="centos"
         else
             error "不支持的操作系统类型"
             exit 1
         fi
-        
-        log "检测到系统类型: $SYSTEM_TYPE"
     }
     
-    # 保存脚本到本地文件
+    # 安装依赖
+    install_dependencies() {
+        log "正在安装必要的依赖..."
+        
+        case "$SYSTEM_TYPE" in
+            debian)
+                sudo apt-get update
+                sudo apt-get install -y curl wget redsocks iptables ipset
+                ;;
+            fedora)
+                sudo dnf install -y curl wget redsocks iptables ipset
+                ;;
+            centos)
+                sudo yum install -y curl wget redsocks iptables ipset
+                ;;
+        esac
+        
+        # 检查安装是否成功
+        for cmd in curl wget redsocks iptables ipset; do
+            if ! command -v "$cmd" >/dev/null 2>&1; then
+                error "依赖 $cmd 安装失败"
+                exit 1
+            fi
+        done
+        
+        success "依赖安装完成"
+    }
+    
+    # 保存脚本到系统目录
     save_script() {
         log "正在保存Stream Weaver脚本..."
         
-        # 从标准输入读取脚本内容并保存
-        cat > sw.sh
+        # 从标准输入读取脚本内容并保存到系统目录
+        sudo tee /usr/local/bin/sw > /dev/null
         
         # 检查保存是否成功
-        if [ ! -f sw.sh ]; then
+        if [ ! -f /usr/local/bin/sw ]; then
             error "脚本保存失败"
             exit 1
         fi
         
         # 设置执行权限
-        chmod +x sw.sh
+        sudo chmod +x /usr/local/bin/sw
         
-        log "Stream Weaver脚本保存完成"
+        success "脚本已安装到 /usr/local/bin/sw"
     }
     
     # 安装为系统服务
     install_service() {
         log "正在安装为系统服务..."
-        sudo ./sw.sh install-service
-        log "系统服务安装完成"
-        
-        # 创建系统级命令链接
-        if [ ! -f "/usr/local/bin/sw" ]; then
-            log "正在创建系统级命令链接..."
-            sudo ln -s "$(pwd)/sw.sh" /usr/local/bin/sw
-            log "系统级命令 'sw' 创建完成"
-        fi
+        sudo /usr/local/bin/sw install-service
+        success "系统服务安装完成"
     }
     
-    # 显示使用说明
-    show_usage() {
-        echo ""
-        echo "✅ Stream Weaver安装完成！"
-        echo ""
-        echo "使用方法:"
-        echo "  1. 配置远程代理服务器:"
-        echo "     sudo ./sw.sh config <远程服务器IP> <端口>"
-        echo "     例如: sudo ./sw.sh config 192.168.1.100 7890"
-        echo ""
-        echo "  2. 启动流量转发:"
-        echo "     sudo ./sw.sh start"
-        echo ""
-        echo "  3. 检查状态:"
-        echo "     ./sw.sh status"
-        echo ""
-        echo "  4. 停止流量转发:"
-        echo "     sudo ./sw.sh stop"
-        echo ""
-        echo "命令缩写:"
-        echo "  sudo ./sw.sh c <IP> <端口>   # 配置代理"
-        echo "  sudo ./sw.sh s               # 启动转发"
-        echo "  sudo ./sw.sh x               # 停止转发"
-        echo "  ./sw.sh t                    # 检查状态"
-        echo ""
-        echo "交互式菜单:"
-        echo "  ./sw.sh menu"
-        echo "  或 ./sw.sh m"
-        echo ""
+    # 启动交互式菜单
+    start_interactive_menu() {
+        log "启动交互式菜单..."
+        exec sudo /usr/local/bin/sw menu
     }
     
     # 管道运行主函数
     main() {
         # 检查是否有数据可以通过管道读取
         if [ ! -t 0 ]; then
+            # 检查参数决定行为
+            local install_service_flag=false
+            local no_menu=false
+            
+            # 解析参数
+            while [[ $# -gt 0 ]]; do
+                case $1 in
+                    install-service)
+                        install_service_flag=true
+                        shift
+                        ;;
+                    no-menu|--no-menu)
+                        no_menu=true
+                        shift
+                        ;;
+                    *)
+                        shift
+                        ;;
+                esac
+            done
+            
             # 保存脚本
             save_script
             
-            # 检查参数决定行为
-            if [ "${1:-}" = "install-service" ]; then
-                install_service
-            elif [ "${1:-}" = "" ]; then
-                # 不带参数时直接进入交互式菜单
-                show_usage
-                echo "正在启动交互式菜单..."
-                sudo ./sw.sh menu
-                exit 0
-            fi
+            # 检查权限
+            check_root
             
-            show_usage
+            # 检测系统类型
+            detect_system
+            
+            # 安装依赖
+            install_dependencies
+            
+            # 根据参数决定行为
+            if [ "$install_service_flag" = true ]; then
+                install_service
+                if [ "$no_menu" = false ]; then
+                    start_interactive_menu
+                else
+                    success "安装完成！使用 'sudo sw menu' 启动交互式菜单"
+                fi
+            elif [ "$no_menu" = false ]; then
+                # 不带参数时直接进入交互式菜单
+                start_interactive_menu
+            else
+                success "安装完成！使用 'sudo sw menu' 启动交互式菜单"
+            fi
         else
             error "脚本未通过管道运行，无法执行一键安装"
             exit 1
