@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # Stream Weaver (流织者) - Linux系统流量转发到远程Clash Verge代理服务器工具
@@ -7,7 +6,7 @@
 # 描述: 将本地系统流量通过redsocks转发到远程Clash Verge代理服务器，像织布一样巧妙地编织和引导网络流
 
 # 检查是否通过管道运行（没有脚本文件名参数）
-if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
+if [[ "${BASH_SOURCE[0]-}" == "" || "${BASH_SOURCE[0]-}" == "bash" ]]; then
     # 管道运行模式 - 保存脚本并执行一键安装
     
     # 设置严格模式
@@ -103,15 +102,28 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
         # 创建临时文件
         local temp_script=$(mktemp)
         
-        # 添加正确的 shebang 行，确保脚本使用 bash 执行
-        echo "#!/bin/bash" > "$temp_script"
+        # 获取当前脚本的完整路径
+        local script_path="${BASH_SOURCE[0]}"
         
-        # 从标准输入读取脚本内容并追加到临时文件
-        cat >> "$temp_script"
+        # 如果脚本路径为空或者是bash（管道模式），需要从/proc/self/fd获取实际内容
+        if [[ "$script_path" == "" || "$script_path" == "bash" ]]; then
+            # 在管道模式下，脚本内容已经在当前执行环境中
+            # 我们需要重新获取原始脚本内容
+            if [ -t 0 ]; then
+                error "无法获取脚本内容，请确保通过管道正确执行脚本"
+                exit 1
+            fi
+            
+            # 从标准输入读取脚本内容（适用于curl | bash场景）
+            cat > "$temp_script"
+        else
+            # 正常模式，直接复制脚本文件
+            cp "$script_path" "$temp_script"
+        fi
         
         # 检查保存是否成功
-        if [ ! -f "$temp_script" ]; then
-            error "脚本保存到临时文件失败"
+        if [ ! -f "$temp_script" ] || [ ! -s "$temp_script" ]; then
+            error "脚本保存到临时文件失败或文件为空"
             exit 1
         fi
         
@@ -139,11 +151,19 @@ if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
     # 启动交互式菜单
     start_interactive_menu() {
         log "启动交互式菜单..."
+        
+        # 检查是否在交互式环境中运行
+        if [ ! -t 0 ] && [ ! -c /dev/tty ]; then
+            warn "非交互式环境检测到，跳过菜单启动"
+            echo "安装完成！使用 'sudo sw menu' 在交互式终端中启动菜单"
+            return 0
+        fi
+        
         # 确保在交互式终端中运行菜单
-        # 在管道模式下，直接调用交互式菜单函数而不是通过exec
+        # 在管道模式下，使用保存的脚本调用菜单
         if [[ "${BASH_SOURCE[0]}" == "" || "${BASH_SOURCE[0]}" == "bash" ]]; then
-            # 管道模式下直接调用菜单
-            interactive_menu
+            # 管道模式下通过exec调用保存的脚本菜单命令
+            exec sudo /usr/local/bin/sw menu </dev/tty >/dev/tty 2>&1
         else
             # 正常模式下使用exec
             exec sudo /usr/local/bin/sw menu </dev/tty >/dev/tty 2>&1
@@ -240,10 +260,10 @@ USE_SYSTEMD=true
 detect_system() {
     if command -v apt-get &>/dev/null; then
         SYSTEM_TYPE="debian"
-    elif command -v yum &>/dev/null; then
-        SYSTEM_TYPE="redhat"
     elif command -v dnf &>/dev/null; then
-        SYSTEM_TYPE="redhat"
+        SYSTEM_TYPE="fedora"
+    elif command -v yum &>/dev/null; then
+        SYSTEM_TYPE="centos"
     else
         error "不支持的操作系统类型"
         exit 1
@@ -1774,11 +1794,25 @@ interactive_menu() {
         echo ""
         
         # 使用不同的方式读取输入，取决于是否在交互式终端中
+        choice=""  # 初始化变量避免未定义错误
         if [ $is_interactive -eq 1 ]; then
             read -p "请选择操作 [0-13]: " choice
         else
-            # 非交互式环境，从终端读取输入
-            read -p "请选择操作 [0-13]: " choice </dev/tty
+            # 非交互式环境，检查/dev/tty是否可用
+            if [ -t 0 ]; then
+                # stdin是终端，直接读取
+                read -p "请选择操作 [0-13]: " choice
+            elif [ -c /dev/tty ]; then
+                # /dev/tty可用，从终端读取
+                read -p "请选择操作 [0-13]: " choice </dev/tty || choice=""
+            else
+                # 无法交互，优雅退出
+                echo "❌ 无法在非交互式环境中启动菜单"
+                echo "请使用命令行参数，例如:"
+                echo "  ./sw.sh status   - 查看状态"
+                echo "  ./sw.sh help     - 查看帮助"
+                break
+            fi
         fi
         echo ""
         
