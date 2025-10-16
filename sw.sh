@@ -98,46 +98,51 @@ if [[ "${BASH_SOURCE[0]-}" == "" || "${BASH_SOURCE[0]-}" == "bash" ]]; then
     # 保存脚本到系统目录
     save_script() {
         log "正在保存Stream Weaver脚本..."
-        
-        # 创建临时文件
-        local temp_script=$(mktemp)
-        
-        # 获取当前脚本的完整路径
-        local script_path="${BASH_SOURCE[0]}"
-        
-        # 如果脚本路径为空或者是bash（管道模式），需要从/proc/self/fd获取实际内容
-        if [[ "$script_path" == "" || "$script_path" == "bash" ]]; then
-            # 在管道模式下，脚本内容已经在当前执行环境中
-            # 我们需要重新获取原始脚本内容
-            if [ -t 0 ]; then
-                error "无法获取脚本内容，请确保通过管道正确执行脚本"
-                exit 1
+
+        local temp_script
+        temp_script=$(mktemp)
+
+        local script_path="${BASH_SOURCE[0]-}"
+        local bash_fd_path="/proc/$$/fd/255"
+        local resolved_source=""
+        local copied=false
+
+        # 管道模式下BASH_SOURCE可能为空、bash或main，需要特殊处理
+        if [[ "$script_path" == "" || "$script_path" == "bash" || "$script_path" == "main" ]]; then
+            if [[ -r "$bash_fd_path" ]]; then
+                resolved_source=$(readlink -f "$bash_fd_path" 2>/dev/null || true)
             fi
-            
-            # 从标准输入读取脚本内容（适用于curl | bash场景）
-            cat > "$temp_script"
+
+            if [[ -n "$resolved_source" && -f "$resolved_source" ]]; then
+                cp "$resolved_source" "$temp_script"
+                copied=true
+            else
+                # 退化方案：尝试从标准输入读取剩余内容（若已被消费，该文件将为空）
+                if ! cat <&0 > "$temp_script" 2>/dev/null; then
+                    error "无法从标准输入读取脚本内容"
+                    exit 1
+                fi
+                copied=true
+            fi
         else
-            # 正常模式，直接复制脚本文件
             cp "$script_path" "$temp_script"
+            copied=true
         fi
-        
-        # 检查保存是否成功
-        if [ ! -f "$temp_script" ] || [ ! -s "$temp_script" ]; then
+
+        if [ "$copied" = false ] || [ ! -s "$temp_script" ]; then
             error "脚本保存到临时文件失败或文件为空"
             exit 1
         fi
-        
-        # 移动到系统目录
+
         sudo mkdir -p /usr/local/bin
         sudo mv "$temp_script" /usr/local/bin/sw
         sudo chmod +x /usr/local/bin/sw
-        
-        # 检查最终保存是否成功
+
         if [ ! -f /usr/local/bin/sw ]; then
             error "脚本保存到系统目录失败"
             exit 1
         fi
-        
+
         success "脚本已安装到 /usr/local/bin/sw"
     }
     
@@ -1030,9 +1035,16 @@ start_proxy() {
 stop_proxy() {
     log "停止流量转发..."
     
-    # 不需要执行完整的系统检查，只需确保必要的命令可用
-    if ! command -v iptables &>/dev/null || ! command -v systemctl &>/dev/null; then
-        error "缺少必要的系统命令"
+    if [ -z "$SYSTEM_TYPE" ]; then
+        detect_system
+    fi
+
+    if ! command -v iptables &>/dev/null; then
+        error "缺少必要的系统命令: iptables"
+        return 1
+    fi
+    if [ "$USE_SYSTEMD" = true ] && ! command -v systemctl &>/dev/null; then
+        error "缺少必要的系统命令: systemctl"
         return 1
     fi
     

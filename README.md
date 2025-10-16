@@ -15,7 +15,7 @@ Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到�
 - **智能路由**：自动跳过本地和私有网络，避免循环转发
 - **自定义豁免**：支持IP地址、域名、端口的豁免规则
 - **批量添加**：支持逗号分隔一次添加多个豁免规则
-- **系统兼容**：兼容Ubuntu/Debian和CentOS/RedHat系列系统
+- **系统兼容**：自动识别 apt/dnf/yum 包管理器，兼容 Ubuntu/Debian、CentOS/RedHat 等主流发行版，并在 systemd 与非 systemd 环境下均可正常运行
 - **命令缩写**：支持命令行参数缩写，提高使用便捷性
 - **灵活重置**：支持完全重置和部分重置（保留豁免规则）
 
@@ -25,11 +25,11 @@ Stream Weaver（流织者）是一个将本地Linux系统流量透明转发到�
 - **Ubuntu/Debian**：18.04/20.04/22.04/24.04, Debian 9/10/11/12
 - **CentOS/RedHat**：CentOS 7/8, RHEL 7/8/9, Rocky Linux 8/9, AlmaLinux 8/9
 
-自动适配系统包管理器和服务管理方式。
+自动适配系统包管理器与服务管理方式（systemd 或传统进程方式）。
 
 ## 🚀 一键安装
 
-使用以下命令下载脚本并启动交互式菜单：
+使用以下命令下载脚本并启动交互式菜单（管道安装已适配，若捕获延迟可通过 `--no-menu` 跳过菜单）：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/MisonL/Stream-Weaver/master/sw.sh | sudo bash
